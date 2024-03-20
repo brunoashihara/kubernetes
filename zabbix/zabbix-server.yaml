@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: monitoring
+  labels:
+    zabbix-app: zabbix-server
+  name: zabbix-server
+spec:
+  ports:
+    - name: zabbix-trapper
+      port: 10051
+      targetPort: 10051
+    - name: zabbix-jmx
+      port: 10052
+      targetPort: 10052
+  selector:
+    zabbix-app: zabbix-server
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: monitoring
+  annotations:
+  labels:
+    zabbix-app: zabbix-server
+  name: zabbix-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      zabbix-app: zabbix-server
+  template:
+    metadata:
+      labels:
+        zabbix-app: zabbix-server
+    spec:
+      containers:
+        - env:
+            - name: DB_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_SERVER_HOST
+                  name: zabbix-app
+
+            - name: DB_SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_SERVER_PORT
+                  name: zabbix-app
+
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  key: MYSQL_DATABASE
+                  name: zabbix-app
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_PASSWORD
+                  name: zabbix-app
+
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_ROOT_PASSWORD
+                  name: zabbix-app
+
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_USER
+                  name: zabbix-app
+
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  key: TZ
+                  name: zabbix-app
+
+            - name: ZBX_ENABLE_SNMP_TRAPS
+              valueFrom:
+                configMapKeyRef:
+                  key: ZBX_ENABLE_SNMP_TRAPS
+                  name: zabbix-app
+
+          image: zabbix/zabbix-server-mysql
+          name: zabbix-server
+          ports:
+            - containerPort: 10051
+              name: zabbix-trapper
+            - containerPort: 10052
+              name: zabbix-jmx
+            - containerPort: 162
+              name : snmptrapd

@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: monitoring
+  creationTimestamp: null
+  labels:
+    zabbix-app: zabbix-web
+  name: zabbix-web
+spec:
+  type: NodePort
+  ports:
+    - name: zabbix-web
+      port: 80
+      targetPort: 8080
+      nodePort: 30080
+  selector:
+    zabbix-app: zabbix-web
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: monitoring
+  labels:
+    zabbix-app: zabbix
+  name: zabbix-web
+spec:
+  selector:
+    matchLabels: 
+      zabbix-app: zabbix-web
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        zabbix-app: zabbix-web
+    spec:
+      containers:
+        - env:
+            - name: DB_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_SERVER_HOST
+                  name: zabbix-app
+
+            - name: DB_SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_SERVER_PORT
+                  name: zabbix-app
+
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  key: MYSQL_DATABASE
+                  name: zabbix-app
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_PASSWORD
+                  name: zabbix-app
+
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_ROOT_PASSWORD
+                  name: zabbix-app
+
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_USER
+                  name: zabbix-app
+
+            - name: PHP_TZ
+              valueFrom:
+                configMapKeyRef:
+                  key: PHP_TZ
+                  name: zabbix-app
+
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  key: TZ
+                  name: zabbix-app
+
+            - name: ZBX_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: ZBX_SERVER_HOST
+                  name: zabbix-app
+
+            - name: ZBX_SERVER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: ZBX_SERVER_NAME
+                  name: zabbix-app
+          image: zabbix/zabbix-web-nginx-mysql
+          name: zabbix-web-ssl
+          ports:
+            - containerPort: 8080

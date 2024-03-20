@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: nextcloud
+  name: nextcloud 
+  labels:
+    app: nextcloud 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud 
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      containers:
+        - image: nextcloud
+          name: nextcloud 
+          ports:
+            - containerPort: 80
+          env:
+            - name: REDIS_HOST
+              value: redis
+
+            - name: MYSQL_HOST
+              value: mariadb 
+
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_DATABASE
+                  name: mariadb-secrets
+
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_PASSWORD
+                  name: mariadb-secrets
+
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_USER
+                  name: mariadb-secrets
+
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_PASSWORD
+                  name: mariadb-secrets 
+
+            - name: NEXTCLOUD_ADMIN_USER
+              value: "admin"
+
+            - name: NEXTCLOUD_TRUSTED_DOMAINS 
+              value: nextcloudbhka.duckdns.org 129.213.93.10
+
+            - name: NEXTCLOUD_URL
+              value: http://nextcloudbhka.duckdns.org
+
+            - name: NEXTCLOUD_UPLOAD_MAX_FILESIZE
+              value: 4G
+
+            - name: NEXTCLOUD_MAX_FILE_UPLOADS
+              value: "20"
+
+                #- name: OVERWRITEPROTOCOL
+              #value: https
+                
+                #- name: NEXTCLOUD_INIT_HTACCESS
+              #value: "true"
+
+                #- name: NEXTCLOUD_INIT_LOCK
+              #value: "true"

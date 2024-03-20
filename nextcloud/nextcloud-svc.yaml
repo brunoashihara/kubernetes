@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: nextcloud
+  labels:
+    app: nextcloud
+  name: nextcloud
+spec:
+  type: NodePort
+  ports:
+    - name: nextcloud
+      port: 80
+      targetPort: 80
+      nodePort: 30080
+  selector:
+    app: nextcloud

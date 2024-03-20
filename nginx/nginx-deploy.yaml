@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: nginx
+  namespace: default
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      run: nginx
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        run: nginx
+    spec:
+      containers:
+        - image: nginx
+          name: nginx
+          volumeMounts:
+          - name: nginx-cm-index
+            mountPath: /usr/share/nginx/html/
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "128Mi"
+            requests:
+              cpu: "0.3"
+              memory: "64Mi"
+          ports:
+            - containerPort: 80
+      volumes:
+        - name: nginx-cm-index
+          configMap:
+            name: nginx-cm-html

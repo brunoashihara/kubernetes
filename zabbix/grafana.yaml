@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: monitoring
+  name: grafana
+  labels:
+    zabbix-app: grafana
+spec:
+  ports:
+    - name: "grafana"
+      port: 3000
+      targetPort: 3000
+  selector:
+    zabbix-app: grafana
+
+---
+      
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: monitoring
+  labels:
+    zabbix-app: grafana
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      zabbix-app: grafana
+  template:
+    metadata:
+      labels:
+        zabbix-app: grafana
+    spec:
+      containers:
+        - env:
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  key: TZ
+                  name: zabbix-app
+
+          image: grafana/grafana
+          name: grafana
+          ports:
+            - containerPort: 3000
