@@ -1,12 +1,34 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx
-  namespace: default
+  namespace: nginx
+  name: nginx-service
+  labels:
+    app: nginx
 spec:
+  type: ClusterIP
   selector:
-    run: nginx
+    app: nginx
   ports:
-    - port: 8080
+    - name: http
+      protocol: TCP
+      port: 80
       targetPort: 80
-      name: nginx
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: nginx
+  name: nginx-exporter
+  labels:
+    app: nginx
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx
+  ports:
+    - name: metrics
+      port: 9113
+      targetPort: 9113

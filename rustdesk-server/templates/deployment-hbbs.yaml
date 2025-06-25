@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: rustdesk
+  name: rustdesk-hbbs
+  labels:
+    app: rustdesk
+    component: hbbs
+spec:
+  replicas: {{ .Values.hbbs.replicas }}
+  selector:
+    matchLabels:
+      app: rustdesk
+      component: hbbs
+  template:
+    metadata:
+      labels:
+        app: rustdesk
+        component: hbbs
+    spec:
+      containers:
+      - name: hbbs
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args: ["hbbs", "-r", "rustdesk-hbbr:21117"]
+        ports:
+        - name: rendezvous
+          containerPort: 21115
+          protocol: TCP
+        - name: udp
+          containerPort: 21116
+          protocol: UDP
+        - name: nat
+          containerPort: 21115
+          protocol: TCP
+        resources:
+          {{- toYaml .Values.hbbs.resources | nindent 10 }}
+        volumeMounts:
+        - name: temp-data
+          mountPath: /tmp
+        livenessProbe:
+          tcpSocket:
+            port: 21115
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 21115
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: temp-data
+        emptyDir: {}
+      restartPolicy: Always

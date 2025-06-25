@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debug-hostpath
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: debug-hostpath
+  template:
+    metadata:
+      labels:
+        app: debug-hostpath
+    spec:
+      containers:
+      - name: busybox
+        image: busybox
+        command: [ "sh", "-c", "sleep 3600" ]
+        volumeMounts:
+        - mountPath: /mnt/data/vault
+          name: vault-dir
+      volumes:
+      - name: vault-dir
+        hostPath:
+          path: /mnt/data/vault
+          type: DirectoryOrCreate

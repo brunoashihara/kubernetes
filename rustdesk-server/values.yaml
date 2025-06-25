@@ -1,0 +1,30 @@
+image:
+  repository: rustdesk/rustdesk-server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+hbbs:
+  nodePortTCP: 32115
+  nodePortUDP: 32116
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+hbbr:
+  nodePort: 32117
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+
+storage:
+  enabled: false 

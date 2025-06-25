@@ -1,0 +1,57 @@
+server:
+  telemetry:
+    enabled: true
+    disable_hostname: true
+    prometheus_retention_time: "30s"
+    disable_hostname: true
+  ha:
+    enabled: false
+    replicas: 1
+  service:
+    type: ClusterIP
+    port: 8200
+  dataStorage:
+    enabled: false
+  volumeMounts:
+    - name: vault-data
+      mountPath: /vault/data
+  volumes:
+    - name: vault-data
+      persistentVolumeClaim:
+        claimName: pvc-vault-local
+  nodeSelector:
+    kubernetes.io/hostname: nodename
+  standalone:
+    enabled: true
+    config: |
+      storage "file" {
+        path = "/vault/data"
+      }
+      listener "tcp" {
+        address     = "0.0.0.0:8200"
+        tls_disable = 1
+        telemetry {
+          unauthenticated_metrics_access = "true"
+        }
+      }
+      telemetry {
+        prometheus_retention_time = "30s"
+        disable_hostname = true
+        usage_gauge_period = "5m"
+        maximum_gauge_cardinality = 500
+      }
+      ui = true
+      disable_mlock = true
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+ui:
+  enabled: true
+injector:
+  enabled: false
+global:
+  enabled: true

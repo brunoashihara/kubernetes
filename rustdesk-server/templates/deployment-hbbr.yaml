@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: rustdesk
+  name: rustdesk-hbbr
+  labels:
+    app: rustdesk
+    component: hbbr
+spec:
+  replicas: {{ .Values.hbbr.replicas }}
+  selector:
+    matchLabels:
+      app: rustdesk
+      component: hbbr
+  template:
+    metadata:
+      labels:
+        app: rustdesk
+        component: hbbr
+    spec:
+      containers:
+      - name: hbbr
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args: ["hbbr"]
+        ports:
+        - name: relay
+          containerPort: 21117
+          protocol: TCP
+        resources:
+          {{- toYaml .Values.hbbr.resources | nindent 10 }}
+        volumeMounts:
+        - name: temp-data
+          mountPath: /tmp
+        livenessProbe:
+          tcpSocket:
+            port: 21117
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 21117
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: temp-data
+        emptyDir: {}
+      restartPolicy: Always

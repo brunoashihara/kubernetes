@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: init-vault-dir
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: init-vault-dir
+  template:
+    metadata:
+      labels:
+        name: init-vault-dir
+    spec:
+      containers:
+      - name: busybox
+        image: busybox
+        command: [ "sleep", "3600" ]
+        volumeMounts:
+        - name: vault-dir
+          mountPath: /mnt/data/vault
+      volumes:
+      - name: vault-dir
+        hostPath:
+          path: /mnt/data/vault
+          type: DirectoryOrCreate
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - operator: "Exists"

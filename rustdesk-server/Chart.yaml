@@ -1,0 +1,5 @@
+apiVersion: v2
+name: rustdesk-server
+description: A Helm chart to deploy RustDesk relay and rendezvous servers
+version: 0.1.0
+appVersion: latest

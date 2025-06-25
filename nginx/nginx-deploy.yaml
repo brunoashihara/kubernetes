@@ -1,36 +1,52 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: nginx
   labels:
-    run: nginx
-  namespace: default
-  name: nginx
+    app: nginx
+  name: nginx-deployment
 spec:
+  replicas: 2
   selector:
     matchLabels:
-      run: nginx
-  replicas: 2
+      app: nginx
   template:
     metadata:
       labels:
-        run: nginx
+        app: nginx
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
-        - image: nginx
-          name: nginx
-          volumeMounts:
-          - name: nginx-cm-index
-            mountPath: /usr/share/nginx/html/
-          resources:
-            limits:
-              cpu: "0.5"
-              memory: "128Mi"
-            requests:
-              cpu: "0.3"
-              memory: "64Mi"
-          ports:
-            - containerPort: 80
+      - image: nginx:1.14.2
+        name: nginx
+        resources:
+          limits:
+            cpu: '0.2'
+            memory: 512Mi
+          requests:
+            cpu: '0.1'
+            memory: 128Mi
+        ports:
+        - containerPort: 80
+        volumeMounts:
+          - name: nginx-config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf
+          - name: nginx-content
+            mountPath: /usr/share/nginx/html
+      - name: nginx-exporter
+        image: nginx/nginx-prometheus-exporter:latest
+        args:
+          - "-nginx.scrape-uri=http://127.0.0.1:80/stub_status"
+        ports:
+          - containerPort: 9113
       volumes:
-        - name: nginx-cm-index
-          configMap:
-            name: nginx-cm-html
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+      - name: nginx-content
+        configMap:
+          name: nginx-index-html

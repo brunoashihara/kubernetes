@@ -6,11 +6,27 @@ metadata:
     app: nextcloud
   name: nextcloud
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
     - name: nextcloud
       port: 80
       targetPort: 80
-      nodePort: 30080
   selector:
     app: nextcloud
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-exporter
+  namespace: nextcloud
+  labels:
+    app: nextcloud-exporter
+spec:
+  selector:
+    app: nextcloud
+  ports:
+    - name: metrics
+      port: 9205
+      targetPort: 9205

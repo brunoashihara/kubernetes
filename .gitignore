@@ -1,0 +1,15 @@
+# Files that can contain personal information
+*.txt
+*.sh
+auth
+
+# Deploys that dont go to repository
+cert-manager/
+jenkins/
+prometheus/
+
+
+# Secrets with personal information
+*original.yaml
+ingress*
+runner-deploy.yaml

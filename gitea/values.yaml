@@ -1,0 +1,81 @@
+gitea:
+  admin:
+    username: gitea_admin
+    password: ""
+    email: "youremail@email.com"
+  metrics:
+    enabled: true
+    token: ""
+    serviceMonitor:
+      enabled: false
+  config:
+    server:
+      DOMAIN: yourdoamin.domain.com
+      SSH_DOMAIN: yourdoamin.domain.com
+      ROOT_URL: https://yourdoamin.domain.com
+      HTTP_PORT: 3000
+      SSH_PORT: 22
+      SSH_LISTEN_PORT: 22
+    database:
+      DB_TYPE: sqlite3
+      HOST: localhost
+      NAME: gitea
+      USER: gitea
+      PASSWD: ""
+      SSL_MODE: disable
+    actions:
+      ENABLE_WEBHOOKS: true
+      RUNNER_CAPACITY: 2
+      runner:
+        image:
+          repository: registry.gitea.svc.cluster.local:5000/gitea-act-runner
+          tag: tools
+
+image:
+  registry: docker.io
+  repository: gitea/gitea
+  tag: "1.24.0"
+  pullPolicy: Always
+  rootless: false
+
+service:
+  http:
+    type: ClusterIP
+    port: 3000
+  ssh:
+    type: NodePort
+    port: 22
+    nodePort: 30022
+
+ingress:
+  enabled: false
+
+persistence:
+  enabled: false
+
+extraPodAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+  prometheus.io/port: "3000"
+
+extraVolumes:
+  - name: gitea-data-sized
+    emptyDir:
+      sizeLimit: "5Gi"
+
+extraContainerVolumeMounts:
+  - name: gitea-data-sized
+    mountPath: /data/gitea-repos
+
+postgresql:
+  enabled: false
+postgresql-ha:
+  enabled: false
+memcached:
+  enabled: false
+redis-cluster:
+  enabled: false
+valkey:
+  enabled: false
+valkey-cluster:
+  enabled: false
