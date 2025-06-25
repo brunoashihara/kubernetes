@@ -32,12 +32,12 @@ kubectl create ns registry # Change to another name like "cicd" if desired
 
 ## Registry Deployment
 
-There is nothing much to do here, just deploy the **registry-deploy.yaml**, **registr-svc.yaml** and **registry-ingress.yaml**:
+There is nothing much to do here, just deploy the **registry-deploy.yaml**, **registry-svc.yaml**, **registry-configmap.yaml** and **registry-ingress.yaml**:
 
 1. Deploy Registry and ingress with CertManager:
 ```bash
 kubectl apply -f ./
 
 # Check if the pods are "Running", the certificate is "True", and the other resources exist
-kubectl get pod,svc,certificate,secrets -n registry
+kubectl get pod,svc,certificate,secrets,configmap -n registry
 ```

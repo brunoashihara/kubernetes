@@ -89,5 +89,3 @@ kubectl get pods,svc,certificate,secret -n gitea
 ## Act-Runner Deployment
 
 Work in progress...
-
-kubectl exec -n gitea $(kubectl get pods -n gitea -l app=docker-builder -o jsonpath="{.items[0].metadata.name}") -it -- sh
