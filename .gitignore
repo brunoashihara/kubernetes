@@ -6,10 +6,5 @@ auth
 # Deploys that dont go to repository
 cert-manager/
 jenkins/
-prometheus/
-
-
-# Secrets with personal information
-*original.yaml
-ingress*
-runner-deploy.yaml
+original/
+opensearch/

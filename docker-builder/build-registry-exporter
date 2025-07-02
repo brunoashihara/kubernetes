@@ -1,0 +1,55 @@
+## Dockerfile
+
+FROM alpine:3.22
+
+RUN apk add --no-cache curl netcat-openbsd bash socat
+
+COPY registry_exporter.sh /usr/local/bin/registry_exporter.sh
+RUN chmod +x /usr/local/bin/registry_exporter.sh
+
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/registry_exporter.sh"]
+
+
+
+#################################################################################################################################################
+
+## registry_exporter.sh
+#!/bin/sh
+
+serve_metrics() {
+  {
+    echo "HTTP/1.1 200 OK"
+    echo "Content-Type: text/plain"
+    echo ""
+
+    echo "# HELP registry_up Registry health status"
+    echo "# TYPE registry_up gauge"
+    if curl -fs "${REGISTRY_URL}/v2/" >/dev/null; then
+      echo "registry_up 1"
+    else
+      echo "registry_up 0"
+    fi
+
+    echo ""
+    echo "# HELP registry_repositories_total Total number of repositories"
+    echo "# TYPE registry_repositories_total gauge"
+    CATALOG=$(curl -s "${REGISTRY_URL}/v2/_catalog" || echo '{"repositories":[]}')
+    COUNT=$(echo "$CATALOG" | grep -o '"repositories":\[.*\]' | grep -o ',' | wc -l)
+    [ "$COUNT" -gt 0 ] && COUNT=$((COUNT + 1))
+    echo "registry_repositories_total $COUNT"
+
+    echo ""
+    echo "# HELP registry_exporter_up Exporter health status"
+    echo "# TYPE registry_exporter_up gauge"
+    echo "registry_exporter_up 1"
+  }
+}
+
+if [ "$1" = "serve" ]; then
+  serve_metrics
+  exit 0
+fi
+
+echo "Starting registry exporter on port 8080..."
+socat TCP4-LISTEN:8080,reuseaddr,fork SYSTEM:"$0 serve"

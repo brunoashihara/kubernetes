@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana-exporter
+  namespace: elk
+  labels:
+    app: kibana-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana-exporter
+  template:
+    metadata:
+      labels:
+        app: kibana-exporter
+    spec:
+      containers:
+        - name: kibana-exporter
+          image: disaster37/kibana-metrics-exporter:latest
+          ports:
+            - containerPort: 9114
+              name: http-metrics
+          env:
+            - name: KIBANA_USER
+              value: "elastic"
+            - name: KIBANA_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-secrets
+                  key: BOOTSTRAP_PASSWORD
+          command: ["/bin/sh"]
+          args:
+            - "-c"
+            - >
+              /kibana-exporter
+              --kibana.uri=http://$(KIBANA_USER):$(KIBANA_PASS)@kibana:5601
+              --web.listen-address=:9114
+              --web.telemetry-path=/metrics

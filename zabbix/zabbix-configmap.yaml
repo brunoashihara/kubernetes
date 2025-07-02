@@ -10,9 +10,9 @@ data:
   ZBX_JAVAGATEWAY_ENABLE: "true"
   ZBX_STARTJAVAPOLLERS: "5"
   ZBX_SERVER_NAME: Composed installation
-  ZBX_SERVER_HOST: "zabbix-server"
+  ZBX_SERVER_HOST: "zabbix"
   ZBX_SERVER_PORT: "10051"
-  DB_SERVER_HOST: "zabbix-db"
+  DB_SERVER_HOST: "mysql"
   DB_SERVER_PORT: "3306"
   PHP_TZ: "America/Sao_Paulo"
   TZ: "America/Sao_Paulo"

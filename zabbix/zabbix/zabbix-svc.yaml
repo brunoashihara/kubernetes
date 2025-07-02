@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: zabbix
+  name: zabbix
+spec:
+  type: NodePort
+  selector:
+    app: zabbix
+  ports:
+    - name: zabbix-trapper
+      port: 10051
+      targetPort: 10051
+      nodePort: 30051
+    - name: zabbix-jmx
+      port: 10052
+      targetPort: 10052
+    - name: snmptrapd
+      port: 162
+      targetPort: 162

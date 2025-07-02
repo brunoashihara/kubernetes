@@ -15,7 +15,7 @@ spec:
       containers:
       - name: busybox
         image: busybox
-        command: [ "sleep", "3600" ]
+        command: [ "sleep", "infinity" ]
         volumeMounts:
         - name: vault-dir
           mountPath: /mnt/data/vault

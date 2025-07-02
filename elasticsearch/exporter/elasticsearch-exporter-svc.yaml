@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-exporter
+  namespace: elk
+  labels:
+    app: elasticsearch-exporter
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9108
+      targetPort: 9108
+      name: http-metrics
+      protocol: TCP
+  selector:
+    app: elasticsearch-exporter

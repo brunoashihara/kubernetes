@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea-act-runner
+  namespace: gitea
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gitea-act-runner
+  template:
+    metadata:
+      labels:
+        app: gitea-act-runner
+    spec:
+      containers:
+        - name: runner
+          image: yourdomain.domain.com/act-runner:latest
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          envFrom:
+            - configMapRef:
+                name: gitea-config
+            - secretRef:
+                name: gitea-secrets
+          volumeMounts:
+            - name: runner-data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "pgrep act_runner || pgrep sleep"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "test -f /data/.runner || echo 'Waiting for registration'"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 10
+      volumes:
+        - name: runner-data
+          emptyDir:
+            sizeLimit: "1Gi"

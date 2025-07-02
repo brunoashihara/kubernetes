@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: zabbix
+  labels:
+    app: web
+  name: web
+spec:
+  selector:
+    matchLabels:
+      app: web
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - env:
+            - name: DB_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_SERVER_HOST
+                  name: zabbix-app
+            - name: DB_SERVER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: DB_SERVER_PORT
+                  name: zabbix-app
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  key: MYSQL_DATABASE
+                  name: zabbix-app
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_PASSWORD
+                  name: zabbix-app
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_ROOT_PASSWORD
+                  name: zabbix-app
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: MYSQL_USER
+                  name: zabbix-app
+            - name: PHP_TZ
+              valueFrom:
+                configMapKeyRef:
+                  key: PHP_TZ
+                  name: zabbix-app
+            - name: TZ
+              valueFrom:
+                configMapKeyRef:
+                  key: TZ
+                  name: zabbix-app
+            - name: ZBX_SERVER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: ZBX_SERVER_HOST
+                  name: zabbix-app
+            - name: ZBX_SERVER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: ZBX_SERVER_NAME
+                  name: zabbix-app
+          image: zabbix/zabbix-web-nginx-mysql
+          name: web
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30

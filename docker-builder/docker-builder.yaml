@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: docker
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: docker-builder
+  name: docker-builder
+  namespace: docker
+spec:
+  containers:
+    - name: docker
+      image: docker:24.0-dind
+      securityContext:
+        privileged: true
+      command: ["sh", "-c"]
+      args:
+        - |
+          dockerd-entrypoint.sh &
+          sleep 10
+          tail -f /dev/null
+      volumeMounts:
+        - name: docker-data
+          mountPath: /var/lib/docker
+  restartPolicy: Never
+  volumes:
+    - name: docker-data
+      emptyDir: {}

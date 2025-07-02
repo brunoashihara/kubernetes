@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: elk
+data:
+  filebeat.yml: |
+    filebeat.autodiscover:
+      providers:
+        - type: kubernetes
+          node: ${NODE_NAME}
+          hints.enabled: true
+          hints.default_config:
+            type: container
+            paths:
+              - /var/log/containers/*.log
+    processors:
+      - add_cloud_metadata: ~
+      - add_host_metadata: ~
+    output.elasticsearch:
+      hosts: ["http://elasticsearch-master:9200"]
+      username: "elastic"
+      password: "${ELASTIC_PASSWORD}"
+    setup.kibana:
+      host: "http://kibana:5601"
+    http:
+      enabled: true
+      host: "0.0.0.0"
+      port: 5066

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb-exporter
+  namespace: nextcloud
+  labels:
+    app: mariadb-exporter
+spec:
+  ports:
+    - port: 9104
+      targetPort: 9104
+      name: http-metrics
+  selector:
+    app: mariadb-exporter
+  type: ClusterIP

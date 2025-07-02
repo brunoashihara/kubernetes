@@ -2,16 +2,14 @@
 
 In this project, we create a Vault pod that uses internal node storage. By default, Vault creates a Block Volume for each replica to maintain data persistence.
 
- - Check the configurations if you want to change, for example, the size of the PV and PVC.
- - **Note**: Since we are using internal storage, it's very important to be aware that the data will be tied to a single node.
-```bash
-  nodeSelector:
-    kubernetes.io/hostname: PUTYOURNODENAME
-```
+> **Note**:
+> Check the configurations if you want to change, for example, the size of the PV and PVC.
+> Since we are using internal storage, it's very important to be aware that the data will be tied to a single node.
+
 
 ## Requirements
 
-Edit **vault-ingress.yaml** and replace with your own domain, as shown in the example below:
+1. Edit **vault-ingress.yaml** and replace with your own domain, as shown in the example below:
 ```bash
 # Old
   tls:
@@ -27,6 +25,16 @@ Edit **vault-ingress.yaml** and replace with your own domain, as shown in the ex
       secretName: vault-tls
   rules:
     - host: vault.example.com
+```
+
+2. Edit **values.yaml** and replace with your own node name, as shown in the example below:
+```bash
+# Old
+  nodeSelector:
+    kubernetes.io/hostname: PUTYOURNODENAME
+# New
+  nodeSelector:
+    kubernetes.io/hostname: 10.10.10.20
 ```
 
 ## Preparing the Environment
@@ -75,28 +83,40 @@ kubectl apply -f pv-vault-local.yaml
 kubectl apply -f pvc-vault-local.yaml
 ```
 
-4. Monitor the status of the PV and PVC. Wait until the status shows as "Bound". **Press Ctrl+C** to exit:
+4. Monitor the status of the PV and PVC. Wait until the status shows as "Bound":
 ```bash
-kubectl get pv,pvc -n vault -w
+kubectl get pv,pvc -n vault
 ```
 
 ## Vault Deployment
-1. Now deploy Vault using Helm. Edit the hostname in the **values.yaml** file before running:
+
+1. Now deploy Vault using Helm. Don't forget to edit the hostname in the **values.yaml** file like Requirements > 2:
 ```bash
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo update
+
 helm upgrade --install vault hashicorp/vault -n vault -f values.yaml
 ```
 
-2. Check the Vault logs. If you see messages like **seal configuration missing, not initialized**, it means Vault is waiting for unseal tokens:
+2. Deploy Ingress and CertManager:
+```bash
+kubectl apply -f vault-ingress.yaml
+
+# Check if the pods are "Running", the certificate is "True", and the other resources exist
+kubectl get pods,svc,certificate,secret,configmap,ingress -n vault
+```
+
+3. Check the Vault logs. If you see messages like **seal configuration missing, not initialized**, it means Vault is waiting for unseal tokens:
 ```bash
 kubectl logs -n vault vault-0
 ```
 
-3. Run the following command to get the unseal and root tokens:
+4. Run the following command to get the unseal and root tokens:
 ```bash
 kubectl exec -it vault-0 -n vault -- vault operator init
 ```
 
-4. Unseal Vault by running the command below three times, using a different unseal key each time:
+5. Unseal Vault by running the command below three times, using a different unseal key each time:
 ```bash
 kubectl exec -it vault-0 -n vault -- vault operator unseal
 ```

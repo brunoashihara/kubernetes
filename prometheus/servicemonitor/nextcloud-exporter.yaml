@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nextcloud-exporter-servicemonitor
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: nextcloud-exporter
+  namespaceSelector:
+    matchNames:
+      - nextcloud
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 15s

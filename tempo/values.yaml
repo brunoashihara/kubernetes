@@ -1,0 +1,8 @@
+tempo:
+  enabled: true
+  metricsGenerator:
+    enabled: true
+  persistence:
+    enabled: false
+  serviceMonitor:
+    enabled: false

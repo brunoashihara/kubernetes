@@ -1,0 +1,233 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zabbix-exporter-config
+  namespace: zabbix
+data:
+  zabbix_exporter.py: |
+    #!/usr/bin/env python3
+    import json
+    import time
+    import requests
+    import os
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    from urllib.parse import urlparse, parse_qs
+    import logging
+
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+
+    class ZabbixAPI:
+        def __init__(self, url, username, password):
+            self.url = url.rstrip('/') + '/api_jsonrpc.php'
+            self.username = username
+            self.password = password
+            self.auth_token = None
+            self.session = requests.Session()
+            self.session.timeout = 10
+            
+        def authenticate(self):
+            """Authenticate with Zabbix API"""
+            payload = {
+                "jsonrpc": "2.0",
+                "method": "user.login",
+                "params": {
+                    "user": self.username,
+                    "password": self.password
+                },
+                "id": 1
+            }
+            
+            try:
+                response = self.session.post(self.url, json=payload)
+                response.raise_for_status()
+                result = response.json()
+                
+                if 'error' in result:
+                    logger.error(f"Authentication failed: {result['error']}")
+                    return False
+                    
+                self.auth_token = result.get('result')
+                logger.info("Successfully authenticated with Zabbix API")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Authentication error: {e}")
+                return False
+        
+        def api_request(self, method, params=None):
+            """Make API request to Zabbix"""
+            if not self.auth_token:
+                if not self.authenticate():
+                    return None
+                    
+            payload = {
+                "jsonrpc": "2.0",
+                "method": method,
+                "params": params or {},
+                "auth": self.auth_token,
+                "id": 1
+            }
+            
+            try:
+                response = self.session.post(self.url, json=payload)
+                response.raise_for_status()
+                result = response.json()
+                
+                if 'error' in result:
+                    logger.error(f"API request failed: {result['error']}")
+                    # Try to re-authenticate on auth error
+                    if result['error'].get('code') == -32602:
+                        self.auth_token = None
+                        return self.api_request(method, params)
+                    return None
+                    
+                return result.get('result')
+                
+            except Exception as e:
+                logger.error(f"API request error: {e}")
+                return None
+
+    class ZabbixExporter:
+        def __init__(self):
+            self.zabbix_url = os.getenv('ZABBIX_API_URL', 'http://web.zabbix.svc.cluster.local')
+            self.zabbix_user = os.getenv('ZABBIX_USER', 'Admin')
+            self.zabbix_password = os.getenv('ZABBIX_PASSWORD', 'zabbix')
+            
+            self.zapi = ZabbixAPI(self.zabbix_url, self.zabbix_user, self.zabbix_password)
+            
+        def get_metrics(self):
+            """Collect metrics from Zabbix"""
+            metrics = []
+            
+            try:
+                # Get host statistics
+                hosts = self.zapi.api_request('host.get', {
+                    'output': ['hostid', 'host', 'status', 'available'],
+                    'selectInterfaces': ['ip']
+                })
+                
+                if hosts:
+                    enabled_hosts = sum(1 for h in hosts if h['status'] == '0')
+                    disabled_hosts = sum(1 for h in hosts if h['status'] == '1')
+                    available_hosts = sum(1 for h in hosts if h['available'] == '1')
+                    unavailable_hosts = sum(1 for h in hosts if h['available'] == '2')
+                    
+                    metrics.extend([
+                        f'zabbix_hosts_total{{status="enabled"}} {enabled_hosts}',
+                        f'zabbix_hosts_total{{status="disabled"}} {disabled_hosts}',
+                        f'zabbix_hosts_available{{status="available"}} {available_hosts}',
+                        f'zabbix_hosts_available{{status="unavailable"}} {unavailable_hosts}',
+                        f'zabbix_hosts_total {len(hosts)}'
+                    ])
+                
+                # Get trigger statistics
+                triggers = self.zapi.api_request('trigger.get', {
+                    'output': ['triggerid', 'status', 'value', 'priority'],
+                    'monitored': True,
+                    'active': True
+                })
+                
+                if triggers:
+                    active_triggers = len(triggers)
+                    problem_triggers = sum(1 for t in triggers if t['value'] == '1')
+                    
+                    # Count by priority
+                    priorities = {'0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0}
+                    for trigger in triggers:
+                        if trigger['value'] == '1':  # Only problem triggers
+                            priorities[trigger['priority']] += 1
+                    
+                    metrics.extend([
+                        f'zabbix_triggers_total {active_triggers}',
+                        f'zabbix_triggers_problems_total {problem_triggers}',
+                        f'zabbix_triggers_problems_by_priority{{priority="not_classified"}} {priorities["0"]}',
+                        f'zabbix_triggers_problems_by_priority{{priority="information"}} {priorities["1"]}',
+                        f'zabbix_triggers_problems_by_priority{{priority="warning"}} {priorities["2"]}',
+                        f'zabbix_triggers_problems_by_priority{{priority="average"}} {priorities["3"]}',
+                        f'zabbix_triggers_problems_by_priority{{priority="high"}} {priorities["4"]}',
+                        f'zabbix_triggers_problems_by_priority{{priority="disaster"}} {priorities["5"]}'
+                    ])
+                
+                # Get item statistics
+                items = self.zapi.api_request('item.get', {
+                    'output': ['itemid', 'status', 'state'],
+                    'monitored': True
+                })
+                
+                if items:
+                    enabled_items = sum(1 for i in items if i['status'] == '0')
+                    disabled_items = sum(1 for i in items if i['status'] == '1')
+                    supported_items = sum(1 for i in items if i['state'] == '0')
+                    unsupported_items = sum(1 for i in items if i['state'] == '1')
+                    
+                    metrics.extend([
+                        f'zabbix_items_total{{status="enabled"}} {enabled_items}',
+                        f'zabbix_items_total{{status="disabled"}} {disabled_items}',
+                        f'zabbix_items_state{{state="supported"}} {supported_items}',
+                        f'zabbix_items_state{{state="unsupported"}} {unsupported_items}',
+                        f'zabbix_items_total {len(items)}'
+                    ])
+                
+                # Add exporter info
+                metrics.append('zabbix_exporter_up 1')
+                
+            except Exception as e:
+                logger.error(f"Error collecting metrics: {e}")
+                metrics.append('zabbix_exporter_up 0')
+            
+            return metrics
+
+    class MetricsHandler(BaseHTTPRequestHandler):
+        def __init__(self, exporter, *args, **kwargs):
+            self.exporter = exporter
+            super().__init__(*args, **kwargs)
+            
+        def do_GET(self):
+            if self.path == '/metrics':
+                self.send_response(200)
+                self.send_header('Content-type', 'text/plain; version=0.0.4; charset=utf-8')
+                self.end_headers()
+                
+                metrics = self.exporter.get_metrics()
+                response = '\n'.join(metrics) + '\n'
+                self.wfile.write(response.encode('utf-8'))
+                
+            elif self.path == '/health':
+                self.send_response(200)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(b'OK')
+                
+            else:
+                self.send_response(404)
+                self.end_headers()
+                
+        def log_message(self, format, *args):
+            # Suppress default logging
+            pass
+
+    def main():
+        port = int(os.getenv('PORT', 9116))
+        
+        logger.info(f"Starting Zabbix exporter on port {port}")
+        logger.info(f"Zabbix URL: {os.getenv('ZABBIX_API_URL')}")
+        logger.info(f"Zabbix User: {os.getenv('ZABBIX_USER')}")
+        
+        exporter = ZabbixExporter()
+        
+        def handler(*args, **kwargs):
+            return MetricsHandler(exporter, *args, **kwargs)
+            
+        httpd = HTTPServer(('0.0.0.0', port), handler)
+        
+        try:
+            logger.info(f"Zabbix exporter started on http://0.0.0.0:{port}")
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            logger.info("Shutting down...")
+            httpd.shutdown()
+
+    if __name__ == '__main__':
+        main()

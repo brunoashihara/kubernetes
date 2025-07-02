@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud-exporter
+  namespace: nextcloud
+  labels:
+    app: nextcloud-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud-exporter
+  template:
+    metadata:
+      labels:
+        app: nextcloud-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9205"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: nextcloud-exporter
+          image: ghcr.io/xperimental/nextcloud-exporter:latest
+          ports:
+            - containerPort: 9205
+          env:
+            - name: NEXTCLOUD_SERVER
+              value: "http://nextcloud" # aponta para o nome do Service
+            - name: NEXTCLOUD_USERNAME
+              value: "admin"
+            - name: NEXTCLOUD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secrets
+                  key: MARIADB_PASSWORD

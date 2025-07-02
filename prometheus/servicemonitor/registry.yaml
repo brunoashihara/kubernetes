@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: registry-servicemonitor
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: registry-exporter
+  namespaceSelector:
+    matchNames:
+      - registry
+  endpoints:
+  - port: http-metrics
+    path: /metrics
+    interval: 15s

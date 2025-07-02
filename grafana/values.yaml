@@ -1,0 +1,70 @@
+grafana:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: grafana/grafana
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: false
+  metrics:
+    enabled: true
+  admin:
+    existingSecret: grafana-secret
+    passwordKey: admin-password
+  extraEnv:
+    - name: TZ
+      value: "America/Sao_Paulo"
+    - name: GF_METRICS_ENABLED
+      value: "true"
+    - name: GF_METRICS_BASIC_AUTH_USERNAME
+      value: ""
+    - name: GF_METRICS_BASIC_AUTH_PASSWORD
+      value: ""
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics"
+
+loki:
+  enabled: true
+  isDefault: true
+  persistence:
+    enabled: false
+  service:
+    ports:
+      http:
+        name: http-metrics
+        port: 3100
+        targetPort: 3100
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 45
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 5
+  livenessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 5
+  serviceMonitor:
+    enabled: false
+
+promtail:
+  enabled: true
+  config:
+    serverPort: 9080
+  service:
+    enabled: true
+    type: ClusterIP
+  serviceMonitor:
+    enabled: false

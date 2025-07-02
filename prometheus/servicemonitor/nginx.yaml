@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nginx-servicemonitor
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: nginx-exporter
+  namespaceSelector:
+    matchNames:
+      - nginx
+  endpoints:
+    - port: http-metrics
+      interval: 10s
+      path: /metrics

@@ -1,0 +1,15 @@
+prometheus:
+  prometheusSpec:
+    maximumStartupDurationSeconds: 60
+    storage:
+      volumeClaimTemplate: null
+    serviceMonitorSelector: {}
+    podMonitorSelector: {}
+    service:
+      type: ClusterIP
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: false

@@ -1,7 +1,9 @@
 # OKE Nextcloud
 
 To deploy Nextcloud (with Prometheus flags), run the following steps in order, monitoring the **Ready**, **Status**, and **Logs** before proceeding to the next step.
-**Note**: This deployment does not use persistent volumes (PV) or persistent volume claims (PVC), so all data is **ephemeral** and will be lost if the pod is restarted. Also, the same password is used for both MariaDB and Nextcloud.
+
+> **Note**:
+> This deployment does not use persistent volumes (PV) or persistent volume claims (PVC), so all data is **ephemeral** and will be lost if the pod is restarted. Also, the same password is used for both MariaDB and Nextcloud.
 
 ## Requirements
 
@@ -61,23 +63,15 @@ echo -n 'yoursecretlikeaccountorpasswordorotherthing' | base64 -w 0 # "-w 0" avo
 2. Copy and paste the result in the **data** section of **mariadb-secrets.yaml**:
 ```bash
 # Old
-MYSQL_PASSWORD: bmV4dGNsb3Vk
+MARIADB_PASSWORD: bmV4dGNsb3Vk
 
 # New
-MYSQL_PASSWORD: eW91cnNlY3JldGxpa2VhY2NvdW50b3JwYXNzd29yZG9yb3RoZXJ0aGluZw==
+MARIADB_PASSWORD: eW91cnNlY3JldGxpa2VhY2NvdW50b3JwYXNzd29yZG9yb3RoZXJ0aGluZw==
 ```
 
-3. Deploy the secrets:
+3. Deploy MariaDB using the manifests:
 ```bash
-kubectl apply -f mariadb-secrets.yaml
-
-# Check
-kubectl get secrets -n nextcloud
-```
-
-4. Deploy MariaDB and its service, then check the logs:
-```bash
-kubectl apply -f mariadb-deploy.yaml -f mariadb-svc-yaml
+kubectl apply -f ./mariadb
 
 # Wait for Ready=1/1 and Status=Running
 kubectl get pods -n nextcloud -l app=mariadb -w
@@ -88,9 +82,9 @@ kubectl logs -n nextcloud -l app=mariadb
 
 ## Redis Deployment
 
-1. Deploy Redis and its service, then check the logs:
+1. Deploy Redis using the manifests:
 ```bash
-kubectl apply -f redis-deploy.yaml -f redis-svc.yaml
+kubectl apply -f ./redis
 
 # Wait for Ready=1/1 and Status=Running
 kubectl get pods -n nextcloud -l app=redis -w
@@ -101,19 +95,75 @@ kubectl logs -n nextcloud -l app=redis
 
 ## Nextcloud Deployment
 
-1. Deploy Nextcloud, its service, and the ingress with CertManager:
+1. Deploy Nextcloud using the manifests:
 ```bash
-kubectl apply -f nextcloud-deploy.yaml -f nextcloud-svc.yaml -f nextcloud-ingress.yaml
+kubectl apply -f ./nextcloud
+
+# Check if the pods are "Running", the certificate is "True", and the other resources exist
+kubectl get pods,svc,certificate,secrets,ingress -n nextcloud
+```
+
+## Exporter Deployment
+
+To monitor MariaDB, redis and nextcloud via Prometheus, follow these steps:
+
+1. Access the MariaDB pod:
+```bash
+kubectl exec -n nextcloud $(kubectl get pods -n nextcloud -l app=mariadb -o jsonpath="{.items[0].metadata.name}") -it -- /bin/bash # or just bash
+```
+
+2. Inside the pod, log into Mariadb:
+```bash
+mariadb -u root -p
+# Password is "nextcloud" by default
+```
+
+3. Create the exporter user or other that you want:
+```bash
+CREATE USER 'exporter'@'%' IDENTIFIED BY 'exporter';
+
+GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'%';
+
+FLUSH PRIVILEGES;
+```
+
+4. Exit MariaDB and optionally test the new user:
+```bash
+exit # Exit MariaDB
+
+# Optional test
+mariadb -u exporter -p
+# Enter "exporter" as password
+exit # Exit MariaDB again
+exit # Exit pod shell
+```
+
+5. If you created a new user/password, update the secret before continuing. Otherwise, go to **step 8**:
+```bash
+echo -n 'yournewuser:yournewpassword@tcp(mariadb:3306)/' | base64 -w 0
+# This return: eW91cm5ld3VzZXI6eW91cm5ld3Bhc3N3b3JkQHRjcChtYXJpYWRiOjMzMDYpLw==
+```
+
+6. Update **mariadb-secrets.yaml**:
+```bash
+# Old
+DATA_SOURCE_NAME: ZXhwb3J0ZXI6ZXhwb3J0ZXJAKG1hcmlhZGI6MzMwNikv
+
+# New
+DATA_SOURCE_NAME: eW91cm5ld3VzZXI6eW91cm5ld3Bhc3N3b3JkQHRjcChtYXJpYWRiOjMzMDYpLw==
+```
+
+7. Re-apply the updated secret:
+```bash
+kubectl apply -f mariadb-secrets.yaml
+```
+
+8. Deploy the Exporters using the manifests:
+```bash
+kubectl apply -f ./exporter
 
 # Wait for Ready=1/1 and Status=Running
-kubectl get pods -n nextcloud -l app=nextcloud -w
+kubectl get pods -n nextcloud -w
 
-# Ctrl+C to stop watching, then check the logs to ensure Nextcloud started successfully
-kubectl logs -n nextcloud -l app=nextcloud
-
-# Wait for certificate to become Ready
-kubectl get certificate -n nextcloud -w
-
-# Ctrl+C to stop watching, then check if secret was created
-kubectl get secrets -n nextcloud
+# Press Ctrl+C to stop watching the logs/output.
 ```

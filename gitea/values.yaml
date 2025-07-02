@@ -1,18 +1,20 @@
 gitea:
   admin:
-    username: gitea_admin
-    password: ""
-    email: "youremail@email.com"
+    existingSecret: gitea-secrets
+    existingUsernameKey: username
+    existingPasswordKey: password
+
   metrics:
     enabled: true
-    token: ""
+    token: "" 
     serviceMonitor:
       enabled: false
+
   config:
     server:
-      DOMAIN: yourdoamin.domain.com
-      SSH_DOMAIN: yourdoamin.domain.com
-      ROOT_URL: https://yourdoamin.domain.com
+      DOMAIN: yourdomain.domain.com
+      SSH_DOMAIN: yourdomain.domain.com
+      ROOT_URL: https://yourdomain.domain.com
       HTTP_PORT: 3000
       SSH_PORT: 22
       SSH_LISTEN_PORT: 22
@@ -22,14 +24,16 @@ gitea:
       NAME: gitea
       USER: gitea
       PASSWD: ""
+      existingSecret: gitea-secrets
+      existingSecretKey: GITEA_DB_PASSWORD
       SSL_MODE: disable
     actions:
       ENABLE_WEBHOOKS: true
       RUNNER_CAPACITY: 2
       runner:
         image:
-          repository: registry.gitea.svc.cluster.local:5000/gitea-act-runner
-          tag: tools
+          repository: yourdomain.domain.com/act-runner
+          tag: latest
 
 image:
   registry: docker.io

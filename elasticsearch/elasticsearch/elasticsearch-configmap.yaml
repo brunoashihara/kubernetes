@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-config
+  namespace: elk
+data:
+  elasticsearch.yml: |
+    cluster.name: "elasticsearch"
+    network.host: 0.0.0.0
+    discovery.type: single-node
+    bootstrap.memory_lock: false
+    xpack.security.enabled: true
+    xpack.security.authc.api_key.enabled: true
+    http.port: 9200
+    transport.port: 9300

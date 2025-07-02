@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-repo-servicemonitor
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-repo-server-metrics
+      app.kubernetes.io/component: repo-server
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 10s
+  namespaceSelector:
+    matchNames:
+      - argocd

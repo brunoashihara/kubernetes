@@ -1,0 +1,55 @@
+global:
+  logging:
+    format: text
+    level: info
+installCRDs: true
+configs:
+  cm:
+    admin.enabled: "true"
+    timeout.reconciliation: "180s"
+    theme: "dark"
+    repository.credentials: |
+      - url: https://github.com/yourgithub
+        username: yourusername
+        password: yourcreatedghp
+  rbac:
+    policy.csv: |
+      p, role:admin, applications, *, *, allow
+      p, role:admin, projects, *, *, allow
+      p, role:admin, clusters, *, *, allow
+      g, admin, role:admin
+    policy.default: role:readonly
+resourceCustomizations:
+  argoproj.io/Application:
+    health.lua: |
+      hs = {}
+      hs.status = "Healthy"
+      hs.message = "Application is healthy"
+      return hs
+secret:
+  argocdServerAdminPassword: ""
+dex:
+  enabled: false
+server:
+  replicas: 1
+  service:
+    ports:
+      http: 80
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+repoServer:
+  replicas: 1
+  metrics:
+    enabled: true
+  serviceMonitor:
+    enabled: false
+controller:
+  replicas: 1
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+applicationSet:
+  enabled: true

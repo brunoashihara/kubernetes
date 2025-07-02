@@ -1,0 +1,87 @@
+## Dockerfile
+
+FROM gitea/act_runner:latest
+
+RUN apk add --no-cache bash curl git unzip python3 py3-pip openssl
+
+ENV TERRAFORM_VERSION=1.7.5
+RUN curl -sLo terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
+  && unzip terraform.zip \
+  && mv terraform /usr/local/bin/terraform \
+  && rm terraform.zip
+
+RUN pip3 install --break-system-packages checkov
+
+ENV TFSEC_VERSION=1.28.14
+RUN curl -sL https://github.com/aquasecurity/tfsec/releases/download/v${TFSEC_VERSION}/tfsec-linux-amd64 -o /usr/local/bin/tfsec \
+  && chmod +x /usr/local/bin/tfsec
+
+ENV TFLINT_VERSION=0.48.1
+RUN curl -sL https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64 -o /usr/local/bin/tflint \
+  && chmod +x /usr/local/bin/tflint
+
+ENV KUBECTL_VERSION=v1.30.1
+RUN curl -sLo /usr/local/bin/kubectl https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl \
+  && chmod +x /usr/local/bin/kubectl
+
+RUN curl -s https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+RUN mkdir -p /data && \
+    chmod 777 /data
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
+#################################################################################################################################################
+
+## entrypoint.sh
+#!/bin/sh
+set -e
+
+CONFIG_DIR=${GITEA_RUNNER_CONFIG:-/data}
+
+echo "[entrypoint] Iniciando configuração do act_runner"
+echo "[entrypoint] Diretório de configuração: $CONFIG_DIR"
+echo "[entrypoint] Current user: $(id)"
+
+cd "${CONFIG_DIR}"
+
+if ls .runner* >/dev/null 2>&1 || ls config* >/dev/null 2>&1; then
+  echo "[entrypoint] Runner já parece estar registrado:"
+  ls -la "${CONFIG_DIR}"
+else
+  echo "[entrypoint] Registrando runner..."
+
+  export GITEA_RUNNER_CONFIG="${CONFIG_DIR}"
+
+  act_runner register \
+    --instance "${GITEA_INSTANCE_URL}" \
+    --token "${GITEA_RUNNER_REGISTRATION_TOKEN}" \
+    --name "${GITEA_RUNNER_NAME}" \
+    --labels "${GITEA_RUNNER_LABELS}" \
+    --no-interactive
+  
+  echo "[entrypoint] Registro concluído. Arquivos criados:"
+  ls -la "${CONFIG_DIR}"
+fi
+
+CONFIG_FILE=""
+for possible_config in "${CONFIG_DIR}/.runner" "${CONFIG_DIR}/config.yaml" "${CONFIG_DIR}/.config" "${CONFIG_DIR}/runner.yaml" "${CONFIG_DIR}/runner.json"; do
+  if [ -f "${possible_config}" ]; then
+    CONFIG_FILE="${possible_config}"
+    echo "[entrypoint] Usando arquivo de configuração: ${CONFIG_FILE}"
+    break
+  fi
+done
+
+if [ -z "${CONFIG_FILE}" ]; then
+  echo "[entrypoint] ERRO: Nenhum arquivo de configuração encontrado!"
+  echo "[entrypoint] Conteúdo do diretório:"
+  ls -la "${CONFIG_DIR}"
+  exit 1
+fi
+
+echo "[entrypoint] Iniciando daemon do act_runner..."
+exec act_runner daemon --config "${CONFIG_FILE}"

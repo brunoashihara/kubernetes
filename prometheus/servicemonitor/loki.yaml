@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: loki-servicemonitor
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: loki
+      release: grafana
+  namespaceSelector:
+    matchNames:
+      - grafana
+  endpoints:
+    - port: http-metrics
+      path: /metrics
+      interval: 15s

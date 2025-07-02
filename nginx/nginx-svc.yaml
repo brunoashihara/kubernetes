@@ -14,21 +14,3 @@ spec:
       protocol: TCP
       port: 80
       targetPort: 80
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  namespace: nginx
-  name: nginx-exporter
-  labels:
-    app: nginx
-spec:
-  type: ClusterIP
-  selector:
-    app: nginx
-  ports:
-    - name: metrics
-      port: 9113
-      targetPort: 9113

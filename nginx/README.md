@@ -55,10 +55,10 @@ data:
     </html>
 ```
 
-2. Deploy Nginx:
+2. Deploy Nginx and Exporter using the manifests:
 ```bash
 kubectl apply -f ./
 
 # Check if the pods are "Running", the certificate is "True", and the other resources exist
-kubectl get pod,svc,configmap,certificate,secrets -n nginx
+kubectl get pods,svc,certificate,secret,configmap,ingress -n nginx
 ```

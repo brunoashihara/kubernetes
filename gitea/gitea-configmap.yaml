@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gitea-config
+  namespace: gitea
+data:
+  GITEA_INSTANCE_URL: "http://gitea-http.gitea.svc.cluster.local:3000"
+  GITEA_RUNNER_NAME: "k8s-runner"
+  GITEA_RUNNER_LABELS: "k8s,terraform,git,ci,kubectl,helm"
+  GITEA_RUNNER_CONFIG: "/data"

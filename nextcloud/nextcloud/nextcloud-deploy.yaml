@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: nextcloud
+  name: nextcloud 
+  labels:
+    app: nextcloud 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud 
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      containers:
+        - image: nextcloud
+          name: nextcloud 
+          ports:
+            - containerPort: 80
+          env:
+            - name: REDIS_HOST
+              value: redis
+
+            - name: MARIADB_HOST
+              value: mariadb 
+
+            - name: MARIADB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  key: MARIADB_DATABASE
+                  name: mariadb-secrets
+
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MARIADB_PASSWORD
+                  name: mariadb-secrets
+
+            - name: MARIADB_USER
+              valueFrom:
+                secretKeyRef:
+                  key: MARIADB_USER
+                  name: mariadb-secrets
+
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MARIADB_PASSWORD
+                  name: mariadb-secrets 
+
+            - name: NEXTCLOUD_ADMIN_USER
+              value: "admin"
+
+            - name: NEXTCLOUD_TRUSTED_DOMAINS
+              value: |
+                yourdomain.domain.com
+                0.0.0.0
+            - name: NEXTCLOUD_URL
+              value: https://yourdomain.domain.com
+
+            - name: NEXTCLOUD_UPLOAD_MAX_FILESIZE
+              value: 4G
+
+            - name: NEXTCLOUD_MAX_FILE_UPLOADS
+              value: "20"
+
+                #- name: OVERWRITEPROTOCOL
+              #value: https
+                
+                #- name: NEXTCLOUD_INIT_HTACCESS
+              #value: "true"
+
+                #- name: NEXTCLOUD_INIT_LOCK
+              #value: "true"

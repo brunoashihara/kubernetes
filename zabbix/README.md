@@ -5,7 +5,7 @@ To deploy Zabbix (with Prometheus flags and exporters), run the following steps 
 
 ## Requirements
 
-Edit **zabbix-ingress.yaml** and replace with your own domain, as shown in the example below:
+1. Edit **zabbix-ingress.yaml** and replace with your own domain, as shown in the example below:
 ```bash
 # Old
   tls:
@@ -21,6 +21,16 @@ Edit **zabbix-ingress.yaml** and replace with your own domain, as shown in the e
       secretName: zabbix-tls
   rules:
     - host: zabbix.example.com
+```
+
+2. Edit **zabbix-configmap.yaml** and replace PHP_TZ and TZ with your Timezone, as shown in the example below:
+```bash
+# Old
+  PHP_TZ: "America/Sao_Paulo"
+  TZ: "America/Sao_Paulo"
+# New
+  PHP_TZ: "America/Santiago"
+  TZ: "America/Santiago"
 ```
 
 ## Create Namespace
@@ -49,7 +59,7 @@ MYSQL_PASSWORD: emFiYml4
 MYSQL_PASSWORD: eW91cnNlY3JldGxpa2VhY2NvdW50b3JwYXNzd29yZG9yb3RoZXJ0aGluZw==
 ```
 
-3. Deploy the secrets and config map:
+3. Deploy Secrets and ConfigMap using the manifests:
 ```bash
 kubectl apply -f zabbix-secrets.yaml -f zabbix-configmap.yaml
 
@@ -57,58 +67,53 @@ kubectl apply -f zabbix-secrets.yaml -f zabbix-configmap.yaml
 kubectl get secrets,configmap -n zabbix
 ```
 
-4. Deploy the MySQL and check the logs:
+4. Deploy MySQL using the manifests:
 ```bash
-kubectl apply -f zabbix-db.yaml
+kubectl apply -f ./mysql
 
 # Wait for Ready=1/1 and Status=Running
-kubectl get pods -n zabbix -l app=zabbix-db -w
+kubectl get pods -n zabbix -l app=mysql -w
 
 # Ctrl+C to stop watching, then check logs to verify if it’s waiting for new connections
-kubectl logs -n zabbix -l app=zabbix-db
+kubectl logs -n zabbix -l app=mysql
 ```
 
 ## Zabbix Server Deployment
 
-1. Deploy the Zabbix Server (includes Zabbix Agent) using **zabbix-server.yaml**:
+1. Deploy Zabbix Server using the manifests:
 ```bash
-kubectl apply -f zabbix-server.yaml
+kubectl apply -f ./zabbix
 
 # Wait for Ready=2/2 and Status=Running
-kubectl get pods -n zabbix -l app=zabbix-server -w
+kubectl get pods -n zabbix -l app=zabbix -w
 
 # Ctrl+C to stop watching, then check logs to see if it's connected to the database
-kubectl logs -n zabbix -l app=zabbix-db
+kubectl logs -n zabbix -l app=zabbix
 ```
 
 ## Zabbix Web Deployment
 
-1. Deploy the web interface and ingress with CertManager:
+1. Deploy Zabbix Web using the manifests:
 ```bash
-kubectl apply -f zabbix-web.yaml
+kubectl apply -f ./web
 
 # Wait for Ready=1/1 and Status=Running
-kubectl get pods -n zabbix -l app=zabbix-web -w
+kubectl get pods -n zabbix -l app=web -w
 
 # Ctrl+C to stop watching, check the logs to ensure it started successfully
-kubectl logs -n zabbix -l app=zabbix-web
+kubectl logs -n zabbix -l app=web
 
-# Now deploy the ingress
-kubectl apply -f zabbix-ingress.yaml
-
-# Wait for certificate to become Ready
-kubectl get certificate -n zabbix -w
-
-# Ctrl+C to stop watching, then check if secret was created
-kubectl get secrets -n zabbix
+# Check if the pods are "Running", the certificate is "True", and the other resources exist
+kubectl get pods,svc,certificate,secret,configmap,ingress -n zabbix
 ```
 
-## Zabbix MySQL Exporter Deployment (Optional)
+## Exporter Deployment (Optional)
 
-If you have Prometheus and want to monitor MySQL, follow these steps:
+To monitor MySQL, Zabbix Server via Prometheus, follow these steps:
+
 1. Access the MySQL pod:
 ```bash
-kubectl exec -n zabbix $(kubectl get pods -n zabbix -l app=zabbix-db -o jsonpath="{.items[0].metadata.name}") -it -- /bin/bash # or just bash
+kubectl exec -n zabbix $(kubectl get pods -n zabbix -l app=mysql -o jsonpath="{.items[0].metadata.name}") -it -- /bin/bash # or just bash
 ```
 
 2. Inside the pod, log into MySQL:
@@ -139,16 +144,17 @@ exit # Exit pod shell
 
 5. If you created a new user/password, update the secret before continuing. Otherwise, go to **step 8**:
 ```bash
-echo -n 'yournewuser:yournewpassword@tcp(zabbix-db.zabbix.svc.cluster.local:3306)/' | base64 -w 0
+echo -n 'yournewuser:yournewpassword@tcp(mysql:3306)/' | base64 -w 0
+# This return: eW91cm5ld3VzZXI6eW91cm5ld3Bhc3N3b3JkQHRjcChteXNxbDozMzA2KS8=
 ```
 
 6. Update **zabbix-secrets.yaml**:
 ```bash
 # Old
-DATA_SOURCE_NAME: ZXhwb3J0ZXI6ZXhwb3J0ZXJAdGNwKHphYmJpeC1kYi56YWJiaXguc3ZjLmNsdXN0ZXIubG9jYWw6MzMwNikv
+DATA_SOURCE_NAME: ZXhwb3J0ZXI6ZXhwb3J0ZXJAdGNwKG15c3FsOjMzMDYpLw==
 
 # New
-DATA_SOURCE_NAME: YOURNEEEEWOUTPUT
+DATA_SOURCE_NAME: eW91cm5ld3VzZXI6eW91cm5ld3Bhc3N3b3JkQHRjcChteXNxbDozMzA2KS8=
 ```
 
 7. Re-apply the updated secret:
@@ -156,12 +162,12 @@ DATA_SOURCE_NAME: YOURNEEEEWOUTPUT
 kubectl apply -f zabbix-secrets.yaml
 ```
 
-8. Deploy the MySQL exporter:
+8. Deploy Exporters using the manifests:
 ```bash
-kubectl apply -f zabbix-db-exporter.yaml
+kubectl apply -f ./exporter
 
 # Wait for Ready=1/1 and Status=Running
-kubectl get pods -n zabbix -l app=zabbix-db-exporter -w
+kubectl get pods -n zabbix -w
 
 # Press Ctrl+C to stop watching the logs/output.
 ```
